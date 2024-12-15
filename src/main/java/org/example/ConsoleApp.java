@@ -1,18 +1,15 @@
 package org.example;
 
 import org.apache.commons.cli.*;
-
+import org.example.progressions.Methods;
 import java.util.List;
-
-import static org.example.Reader.ReadFile;
-import static org.example.Writer.WriteFile;
 
 public class ConsoleApp {
     public static final String help = "-i <in-file> [-o <out-file>]";
+    public Methods methods;
 
-    public static void main(String[] args) {
+    public ConsoleApp(String[] args) {
         Options cmdLineOptions = new Options();
-        cmdLineOptions.addOption("a", "app-type", false, "Type of the app to launch");
         cmdLineOptions.addOption("i", "input-file", true, "Input file directory");
         cmdLineOptions.addOption("o", "output-file", true, "Output file directory");
 
@@ -30,14 +27,19 @@ public class ConsoleApp {
             System.exit(1);
         }
 
-        String inputFilename = cmdLine.getOptionValue("i");
-        int[][] array = ReadFile(inputFilename); //===================================================
+        Filer.directory = cmdLine.getOptionValue("i");
+        methods.ReadFile();
+        List<Integer> list = Filer.output;
 
-        List<Integer> progression = FindingProgression(array);
+        FindingProgression.process(list);
+        List<Integer> progression = FindingProgression.integerList;
         System.out.println("Progression is: " + progression);
 
-        if (cmdLine.hasOption("o"))
-            WriteFile(cmdLine.getOptionValue("o"), progression);
+        if (cmdLine.hasOption("o")) {
+            Filer.directory = cmdLine.getOptionValue("o");
+            Filer.output = progression;
+            methods.WriteFile();
+        }
         System.out.close();
     }
 }

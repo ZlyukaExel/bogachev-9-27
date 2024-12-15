@@ -1,28 +1,38 @@
 package org.example;
 
+import org.example.progressions.Methods;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.io.File;
-
-import static org.example.Reader.ReadFile;
-import static org.example.Writer.WriteFile;
+import java.util.ArrayList;
+import java.util.List;
 
 public class App {
     private final DefaultTableModel model;
-    private int rows = 5;
-    private int columns = 5;
+    private int columns = 2;
+    private Methods methods;
 
     public App() {
         JFrame frame = new JFrame("Поиск прогрессии!");
         frame.setTitle("Поиск прогрессии!");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(600, 400);
+        frame.setSize(600, 220);
 
         frame.setLayout(new BorderLayout());
 
-        model = new DefaultTableModel(rows, columns);
+        model = new DefaultTableModel(1, columns);
+        for (int i = 0; i < columns; i++) {
+            model.setValueAt(0, 0, i);
+        }
         JTable table = new JTable(model);
+        table.setRowHeight(50);
+        table.setCellSelectionEnabled(true);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setDefaultEditor(Object.class, new AutoSelectCellEditor());
         JScrollPane scrollPane = new JScrollPane(table);
         frame.add(scrollPane, BorderLayout.CENTER);
 
@@ -39,15 +49,15 @@ public class App {
 
         JButton readButton = new JButton("Загрузить файл");
         JButton outputButton = new JButton("Сохранить результат");
-        JButton addColumnButton = new JButton("Добавить столбец");
-        JButton addRowButton = new JButton("Добавить строку");
+        JButton addColumnButton = new JButton("Добавить число");
+        JButton deleteColumnButton = new JButton("Удалить число");
         JButton resetButton = new JButton("Пересоздать таблицу");
-        JButton showResultButton = new JButton("Найти победителя");
+        JButton showResultButton = new JButton("Найти последовательность");
 
         buttonPanel.add(readButton);
         buttonPanel.add(outputButton);
         buttonPanel.add(addColumnButton);
-        buttonPanel.add(addRowButton);
+        buttonPanel.add(deleteColumnButton);
         buttonPanel.add(resetButton);
         buttonPanel.add(showResultButton);
 
@@ -61,29 +71,25 @@ public class App {
             int returnValue = fileChooser.showOpenDialog(null);
             if (returnValue == JFileChooser.APPROVE_OPTION) {
                 File file = fileChooser.getSelectedFile();
-                for (int i = 0; i < rows; i++) {
-                    for (int j = 0; j < columns; j++) {
-                        model.setValueAt(null, i, j);
-                    }
+                for (int i = 0; i < columns; i++) {
+                    model.setValueAt(null, 0, i);
                 }
 
-                int[][] board = ReadFile(file.getAbsolutePath());
-                rows = board.length;
-                columns = board[0].length;
-                model.setRowCount(rows);
+                Filer.directory = file.getAbsolutePath();
+                methods.ReadFile();
+                List<Integer> board = Filer.output;
+
+                columns = board.size();
                 model.setColumnCount(columns);
-                for (int i = 0; i < rows; i++) {
-                    for (int j = 0; j < columns; j++) {
-                        int val = board[i][j];
-                        model.setValueAt(val == 2 ? "" : val, i, j); //==================================
-                    }
+                for (int i = 0; i < columns; i++) {
+                    int val = board.get(i);
+                    model.setValueAt(val, 0, i);
                 }
             }
         });
 
-
         outputButton.addActionListener(e -> {
-            int[][] outputArray = GetArray();
+            List<Integer> outputList = GetList();
 
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
@@ -91,61 +97,80 @@ public class App {
             int returnValue = fileChooser.showSaveDialog(null);
             if (returnValue == JFileChooser.APPROVE_OPTION) {
                 File file = fileChooser.getSelectedFile();
-                WriteFile(file.getAbsolutePath(), FindWinner(outputArray)); //============================
+
+                Filer.directory = file.getAbsolutePath();
+                Filer.output = FindProg(outputList);
+                methods.WriteFile();
             }
         });
 
         addColumnButton.addActionListener(e -> {
             model.setColumnCount(model.getColumnCount() + 1);
+            model.setValueAt(0, 0, columns);
             columns++;
         });
 
-        addRowButton.addActionListener(e -> {
-            model.setRowCount(model.getRowCount() + 1);
-            rows++;
+        deleteColumnButton.addActionListener(e -> {
+            if (columns > 2) {
+                model.setColumnCount(model.getColumnCount() - 1);
+                columns--;
+            }
+            else
+                label.setText("Минимум два элемента должны остаться!");
         });
 
         resetButton.addActionListener(e -> {
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < columns; j++) {
-                    model.setValueAt(null, i, j);
-                }
+            for (int j = 0; j < columns; j++) {
+                model.setValueAt(0, 0, j);
             }
-            model.setRowCount(5);
-            rows = 5;
-            model.setColumnCount(5);
-            columns = 5;
+            model.setRowCount(1);
+            model.setColumnCount(2);
+            columns = 2;
         });
 
         showResultButton.addActionListener(e -> {
-            int winner = FindWinner(GetArray()); //==========================================
-            switch (winner) {
-                case 1: {
-                    label.setText("Победили 1! Поздравляем!");
-                    break;
-                }
-                case 0: {
-                    label.setText("Победила дружба! Поздравляем!");
-                    break;
-                }
-                case -1: {
-                    label.setText("Победили 0! Поздравляем!");
-                    break;
-                }
-            }
+            List<Integer> list = FindProg(GetList());
+            StringBuilder text = new StringBuilder("Результат:");
+            for (Integer val : list)
+                text.append(" ").append(val);
+            label.setText(text.toString());
         });
 
         frame.setVisible(true);
     }
 
-    public int[][] GetArray() {
-        int[][] array = new int[rows][columns]; //===============================================
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < columns; j++) {
-                String val = String.valueOf(model.getValueAt(i, j));
-                array[i][j] = val.isEmpty() || val.equals("null") ? 2 : Integer.parseInt(val);
-            }
+    public List<Integer> GetList() {
+        List<Integer> list = new ArrayList<>();
+        for (int j = 0; j < columns; j++) {
+            String val = String.valueOf(model.getValueAt(0, j));
+            list.add(val.isEmpty() || val.equals("null") ? 0 : Integer.parseInt(val));
         }
-        return array;
+        return list;
+    }
+
+    public List<Integer> FindProg(List<Integer> list) {
+        FindingProgression.process(list);
+        return FindingProgression.integerList;
+    }
+}
+
+class AutoSelectCellEditor extends DefaultCellEditor {
+
+    public AutoSelectCellEditor() {
+        super(new JTextField());
+        this.getComponent().addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                JTextField textField = (JTextField) getComponent();
+                textField.selectAll();
+            }
+        });
+    }
+
+    @Override
+    public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+        JTextField textField = (JTextField) super.getTableCellEditorComponent(table, value, isSelected, row, column);
+        textField.setText(value != null ? value.toString() : "");
+        return textField;
     }
 }
