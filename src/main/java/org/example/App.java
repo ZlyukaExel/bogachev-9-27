@@ -14,9 +14,10 @@ import java.util.List;
 public class App {
     private final DefaultTableModel model;
     private int columns = 2;
-    private Methods methods;
+    private final Methods methods;
 
     public App() {
+        this.methods = new Filer();
         JFrame frame = new JFrame("Поиск прогрессии!");
         frame.setTitle("Поиск прогрессии!");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

@@ -9,6 +9,7 @@ public class ConsoleApp {
     public Methods methods;
 
     public ConsoleApp(String[] args) {
+        this.methods = new Filer();
         Options cmdLineOptions = new Options();
         cmdLineOptions.addOption("i", "input-file", true, "Input file directory");
         cmdLineOptions.addOption("o", "output-file", true, "Output file directory");
