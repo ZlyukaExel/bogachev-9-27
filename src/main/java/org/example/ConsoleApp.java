@@ -2,6 +2,8 @@ package org.example;
 
 import org.apache.commons.cli.*;
 import org.example.progressions.Methods;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public class ConsoleApp {
@@ -9,6 +11,7 @@ public class ConsoleApp {
     public Methods methods;
 
     public ConsoleApp(String[] args) {
+        this.methods = new Filer();
         Options cmdLineOptions = new Options();
         cmdLineOptions.addOption("i", "input-file", true, "Input file directory");
         cmdLineOptions.addOption("o", "output-file", true, "Output file directory");
@@ -29,15 +32,20 @@ public class ConsoleApp {
 
         Filer.directory = cmdLine.getOptionValue("i");
         methods.ReadFile();
-        List<Integer> list = Filer.output;
+        List<List<String>> list = Filer.content;
+        List<Candy> candies = new ArrayList<>();
+        for(List<String> strLst : list){
+            String name = strLst.getFirst();
+            double price = Double.parseDouble(strLst.getLast());
+            candies.add(new Candy(name, price));
+        }
+        double money = Double.parseDouble(Filer.money);
 
-        FindingProgression.process(list);
-        List<Integer> progression = FindingProgression.integerList;
-        System.out.println("Progression is: " + progression);
+        String result = Candies.Count(candies, money);
 
         if (cmdLine.hasOption("o")) {
             Filer.directory = cmdLine.getOptionValue("o");
-            Filer.output = progression;
+            Filer.output = result;
             methods.WriteFile();
         }
         System.out.close();

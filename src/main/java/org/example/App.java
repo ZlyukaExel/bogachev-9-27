@@ -13,22 +13,32 @@ import java.util.List;
 
 public class App {
     private final DefaultTableModel model;
-    private int columns = 2;
-    private Methods methods;
+    private int rows = 1;
+    private final Methods methods;
+    private final JLabel label;
+    private final JTextField inputField;
 
     public App() {
-        JFrame frame = new JFrame("Поиск прогрессии!");
-        frame.setTitle("Поиск прогрессии!");
+        this.methods = new Filer();
+        JFrame frame = new JFrame("Покупка конфет!");
+        frame.setTitle("Покупка конфет!");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(600, 220);
+        frame.setSize(900, 660);
 
         frame.setLayout(new BorderLayout());
 
-        model = new DefaultTableModel(1, columns);
-        for (int i = 0; i < columns; i++) {
-            model.setValueAt(0, 0, i);
-        }
+        label = new JLabel("Скорее вводи данные!");
+        label.setPreferredSize(new Dimension(300, 30));
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        frame.add(label, BorderLayout.NORTH);
+
+        model = new DefaultTableModel(rows, 2);
+
         JTable table = new JTable(model);
+
+        table.getColumnModel().getColumn(0).setHeaderValue("Название конфеты");
+        table.getColumnModel().getColumn(1).setHeaderValue("Цена за кг");
+
         table.setRowHeight(50);
         table.setCellSelectionEnabled(true);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -39,25 +49,29 @@ public class App {
         JPanel bottomPanel = new JPanel();
         bottomPanel.setLayout(new BorderLayout());
 
-        JLabel label = new JLabel("Скорее вводи числа!");
-        label.setPreferredSize(new Dimension(300, 30));
-        label.setHorizontalAlignment(SwingConstants.CENTER);
-        bottomPanel.add(label);
+        JLabel inputFieldLabel = new JLabel("Твой бюджет:");
+        inputFieldLabel.setFont(new Font("JetBrains Mono", Font.PLAIN, 12));
+        inputFieldLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        bottomPanel.add(inputFieldLabel, BorderLayout.NORTH);
+
+        inputField = new JTextField();
+        inputField.setPreferredSize(new Dimension(30, 25));
+        bottomPanel.add(inputField);
 
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(new GridLayout(3, 2));
 
-        JButton readButton = new JButton("Загрузить файл");
+        JButton readButton = new JButton("Загрузить конфеты из файла");
         JButton outputButton = new JButton("Сохранить результат");
-        JButton addColumnButton = new JButton("Добавить число");
-        JButton deleteColumnButton = new JButton("Удалить число");
+        JButton addRowButton = new JButton("Добавить конфету");
+        JButton deleteRowButton = new JButton("Удалить конфету");
         JButton resetButton = new JButton("Пересоздать таблицу");
-        JButton showResultButton = new JButton("Найти последовательность");
+        JButton showResultButton = new JButton("Купить конфеты!");
 
         buttonPanel.add(readButton);
         buttonPanel.add(outputButton);
-        buttonPanel.add(addColumnButton);
-        buttonPanel.add(deleteColumnButton);
+        buttonPanel.add(addRowButton);
+        buttonPanel.add(deleteRowButton);
         buttonPanel.add(resetButton);
         buttonPanel.add(showResultButton);
 
@@ -71,86 +85,106 @@ public class App {
             int returnValue = fileChooser.showOpenDialog(null);
             if (returnValue == JFileChooser.APPROVE_OPTION) {
                 File file = fileChooser.getSelectedFile();
-                for (int i = 0; i < columns; i++) {
-                    model.setValueAt(null, 0, i);
-                }
-
                 Filer.directory = file.getAbsolutePath();
+                label.setText("Загружен файл " + file.getAbsolutePath());
                 methods.ReadFile();
-                List<Integer> board = Filer.output;
-
-                columns = board.size();
-                model.setColumnCount(columns);
-                for (int i = 0; i < columns; i++) {
-                    int val = board.get(i);
-                    model.setValueAt(val, 0, i);
+                inputField.setText(Filer.money);
+                List<List<String>> candies = Filer.content;
+                rows = candies.size();
+                model.setRowCount(rows);
+                for (int i = 0; i < rows; i++) {
+                    model.setValueAt(candies.get(i).getFirst(), i, 0);
+                    model.setValueAt(candies.get(i).getLast(), i, 1);
                 }
             }
         });
 
         outputButton.addActionListener(e -> {
-            List<Integer> outputList = GetList();
-
+            printResult();
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
             fileChooser.setSelectedFile(new File("output.txt"));
             int returnValue = fileChooser.showSaveDialog(null);
             if (returnValue == JFileChooser.APPROVE_OPTION) {
                 File file = fileChooser.getSelectedFile();
-
                 Filer.directory = file.getAbsolutePath();
-                Filer.output = FindProg(outputList);
+                Filer.output = label.getText();
                 methods.WriteFile();
             }
         });
 
-        addColumnButton.addActionListener(e -> {
-            model.setColumnCount(model.getColumnCount() + 1);
-            model.setValueAt(0, 0, columns);
-            columns++;
+        addRowButton.addActionListener(e -> {
+            model.setRowCount(model.getRowCount() + 1);
+            rows++;
+            label.setText("Конфета добавлена!");
         });
 
-        deleteColumnButton.addActionListener(e -> {
-            if (columns > 2) {
-                model.setColumnCount(model.getColumnCount() - 1);
-                columns--;
-            }
-            else
-                label.setText("Минимум два элемента должны остаться!");
+        deleteRowButton.addActionListener(e -> {
+            if (rows > 1) {
+                model.setRowCount(model.getRowCount() - 1);
+                rows--;
+                label.setText("Конфета удалена!");
+            } else label.setText("Хотя бы одна конфета должна остаться!");
         });
 
         resetButton.addActionListener(e -> {
-            for (int j = 0; j < columns; j++) {
-                model.setValueAt(0, 0, j);
-            }
             model.setRowCount(1);
-            model.setColumnCount(2);
-            columns = 2;
+            rows = 1;
+            for (int j = 0; j < 2; j++) {
+                model.setValueAt(null, 0, j);
+            }
+            label.setText("Таблица пересоздана!");
         });
 
-        showResultButton.addActionListener(e -> {
-            List<Integer> list = FindProg(GetList());
-            StringBuilder text = new StringBuilder("Результат:");
-            for (Integer val : list)
-                text.append(" ").append(val);
-            label.setText(text.toString());
-        });
+        showResultButton.addActionListener(e -> printResult());
 
         frame.setVisible(true);
     }
 
-    public List<Integer> GetList() {
-        List<Integer> list = new ArrayList<>();
-        for (int j = 0; j < columns; j++) {
-            String val = String.valueOf(model.getValueAt(0, j));
-            list.add(val.isEmpty() || val.equals("null") ? 0 : Integer.parseInt(val));
-        }
-        return list;
-    }
 
-    public List<Integer> FindProg(List<Integer> list) {
-        FindingProgression.process(list);
-        return FindingProgression.integerList;
+    public void printResult() {
+        List<Candy> candies = new ArrayList<>();
+        for (int i = 0; i < rows; i++) {
+            Object name = model.getValueAt(i, 0);
+            Object priceStr = model.getValueAt(i, 1);
+            double price;
+
+            if (name == null || name.toString().isEmpty()) {
+                label.setText("Названия всех конфет должны быть указаны!");
+                return;
+            }
+            if (priceStr == null || priceStr.toString().isEmpty()) {
+                label.setText("Цены всех конфет должны быть указаны!");
+                return;
+            } else {
+                try {
+                    price = Double.parseDouble(priceStr.toString());
+                } catch (NumberFormatException error) {
+                    label.setText("Цена должна быть указана числом!");
+                    return;
+                }
+            }
+            if (price > 0) candies.add(new Candy(name.toString(), price));
+            else {
+                label.setText("Мы тут благотворительностью не занимаемся!");
+                return;
+            }
+        }
+        String moneyStr = inputField.getText();
+        double money;
+        if (moneyStr == null || moneyStr.isEmpty()) {
+            label.setText("Ты не указал свой бюджет!");
+            return;
+        }
+        try {
+            money = Double.parseDouble(moneyStr);
+        } catch (NumberFormatException error) {
+            label.setText("Твой бюджет должен быть указан числом!");
+            return;
+        }
+        if (money <= 0) {
+            label.setText("Поднакопи-ка лучше денег и приходи в другой раз...");
+        } else label.setText(Candies.Count(candies, money));
     }
 }
 
@@ -173,4 +207,5 @@ class AutoSelectCellEditor extends DefaultCellEditor {
         textField.setText(value != null ? value.toString() : "");
         return textField;
     }
+
 }

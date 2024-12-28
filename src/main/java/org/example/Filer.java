@@ -4,28 +4,32 @@ import org.example.progressions.Methods;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Filer implements Methods {
     static String directory;
-    static List<Integer> output;
+    static String output;
+    static List<List<String>> content;
+    static String money;
 
     public void WriteFile() {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(directory))) {
-            for(Integer val : output) {
-                bw.write(String.valueOf(output) + " ");
-            }
+            bw.write(output);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     public void ReadFile() {
-        output = new ArrayList<>();
+        content = new ArrayList<>();
         try {
             BufferedReader br = new BufferedReader(new FileReader(directory));
-            for (String num : br.readLine().trim().split(", ")) {
-                output.add(Integer.parseInt(num));
+            money = br.readLine();
+            String line = br.readLine();
+            while (line != null) {
+                content.add(Arrays.stream(line.split(" ")).toList());
+                line = br.readLine();
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
